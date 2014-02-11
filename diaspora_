@@ -1,0 +1,127 @@
+#!/usr/bin/env ruby
+@dummyvar = <<-'=cut'
+
+=head1 NAME
+
+diaspora_ - Munin plugin for diaspora pods.
+
+=head1 APPLICABLE SYSTEMS
+
+Diaspora 0.3.0.0 or higher with statistics enabled.
+
+=head1 USAGE
+
+Needs access to http://<host>/statistics.json
+
+=head1 CONFIGURATION
+
+The following environment variables are used by this plugin:
+
+ host            - Pod Hostname
+ port            - Port (default 443)
+ ssl             - Use SSL (default true)
+
+Use diaspora_users to monitor users or diaspora_posts to monitor posts.
+
+=head2 CONFIGURATION EXAMPLE
+
+  [diaspora_*]
+  env.host nerdpol.ch
+  env.port 80
+  env.ssl false
+
+=head1 MAGIC MARKERS
+
+ #%# family=manual
+ #%# capabilities=autoconf
+
+=head1 AUTHOR
+
+Copyright (C) 2014 Benjamin Neff <benjamin@coding4coffee.ch>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+require 'net/http'
+require 'net/https'
+require 'json'
+
+@host = ENV.member?('host') ? ENV['host']: "127.0.0.1"
+@port = ENV.member?('port') ? ENV['port']: 443
+@ssl = ENV.member?('ssl') ? ENV['ssl'] == "true":  true
+
+# open stderr
+e = IO.new(2, "w")
+
+@mode = $0.gsub /.*\/diaspora_/, ""
+
+# http request
+def getstat()
+    http = Net::HTTP.new(@host, @port)
+    if @ssl
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    end
+    request = Net::HTTP::Get.new("/statistics.json")
+    response = http.request(request)
+    if response.code == "200"
+        return response.body
+    end
+    return false
+end
+
+if ARGV[0] == "autoconf"
+    begin
+        if @mode != "users" && @mode != "posts"
+            puts "no (Invalid mode)"
+        elsif getstat()
+            puts "yes"
+        else
+            puts "no"
+        end
+    rescue
+        puts "no (#{$!})"
+    end
+    exit 0
+end
+
+# munin config request
+if ARGV[0] == "config"
+    case @mode
+        when "users"
+            puts "graph_title Diaspora Users"
+            puts "graph_category diaspora"
+            puts "graph_args --base 1000"
+            puts "graph_vlabel users"
+	    puts "graph_order active_users_monthly active_users_halfyear total_users"
+            puts "active_users_monthly.label active users (1 month)";
+            puts "active_users_monthly.draw LINE1";
+            puts "active_users_halfyear.label  active users (6 month)";
+            puts "active_users_halfyear.draw LINE1";
+            puts "total_users.label total users";
+            puts "total_users.draw LINE1";
+        when "posts"
+            puts "graph_title Diaspora Posts"
+            puts "graph_category diaspora"
+            puts "graph_args --base 1000"
+            puts "graph_vlabel posts"
+            puts "local_posts.label local posts"
+            puts "local_posts.draw LINE1"
+    end
+    exit 0
+end
+
+result = JSON.parse(getstat())
+
+case @mode
+    when "users"
+        printf "active_users_monthly.value %s\n", result["active_users_monthly"]
+        printf "active_users_halfyear.value %s\n", result["active_users_halfyear"]
+        printf "total_users.value %s\n", result["total_users"]
+    when "posts"
+        printf "local_posts.value %s\n", result["local_posts"]
+end
+
