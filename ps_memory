@@ -17,6 +17,7 @@ Any system with a compatible ps command.
 There is no default configuration.  This is an example:
 
   [ps_memory]
+     user root
      env.names apache2 nagios3
 
 The names are used to grep with directly, after cleaning. So, this plugin
