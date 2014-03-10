@@ -5,8 +5,8 @@
 
 =head1 NAME
 
-multimemory - Munin plugin to monitor memory usage of processes. Which processes
-are configured in client-conf.d
+ps_memory - Munin plugin to monitor memory usage of processes. Which processes
+are configured in plugin-conf.d
 
 =head1 APPLICABLE SYSTEMS
 
@@ -16,7 +16,7 @@ Any system with a compatible ps command.
 
 There is no default configuration.  This is an example:
 
-  [multimemory]
+  [ps_memory]
      env.names apache2 nagios3
 
 The names are used to grep with directly, after cleaning. So, this plugin
