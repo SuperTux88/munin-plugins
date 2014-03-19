@@ -90,7 +90,7 @@ my $players = 0;
 my $bots = 0;
 
 foreach my $statline (@reply) {
-    if ($statline =~ m/#\s*\d+\s*".*"\s*STEAM[\w:]*/) {
+    if ($statline =~ m/#\s*\d+\s*(\d )?".*"\s*STEAM[\w:]*/) {
         $players++;
     }
     if ($statline =~ m/#\s*\d+\s*".*"\s*BOT*/) {
