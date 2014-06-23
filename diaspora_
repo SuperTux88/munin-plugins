@@ -108,8 +108,10 @@ if ARGV[0] == "config"
             puts "graph_category diaspora"
             puts "graph_args --base 1000"
             puts "graph_vlabel posts"
-            puts "local_posts.label local posts"
+            puts "local_posts.label posts from local users"
             puts "local_posts.draw LINE1"
+            puts "local_comments.label comments from local users"
+            puts "local_comments.draw LINE1"
     end
     exit 0
 end
@@ -123,5 +125,6 @@ case @mode
         printf "total_users.value %s\n", result["total_users"]
     when "posts"
         printf "local_posts.value %s\n", result["local_posts"]
+        printf "local_comments.value %s\n", result["local_comments"]
 end
 
