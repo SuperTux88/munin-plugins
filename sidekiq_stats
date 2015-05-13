@@ -1,0 +1,87 @@
+#!/bin/bash
+
+: <<=cut
+
+=head1 NAME
+
+sidekiq_stats - Munin plugin for sidekiq.
+
+=head1 CONFIGURATION
+
+There is no default configuration. This is an example:
+
+  [sidekiq_*]
+     user diaspora
+     env.path /srv/diaspora
+
+=head1 MAGIC MARKERS
+
+  #%# family=manual
+  #%# capabilities=autoconf
+
+=head1 AUTHOR
+
+Copyright (C) 2015 Benjamin Neff <benjamin@coding4.coffee>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+if [ "$1" = "autoconf" ] ; then 
+	if [ -n "$path" ] ; then
+		echo "yes"
+	else
+		echo "\$path not defined."
+	fi
+	exit
+fi
+
+if [ "$1" = "config" ] ; then
+	echo "graph_args --base 1000 --lower-limit 0";
+	echo "graph_title Sidekiq Jobs";
+	echo "graph_category sidekiq";
+	echo "graph_info This graph shows the processed and failed jobs.";
+	echo "graph_period min"
+	echo "graph_vlabel jobs/min"
+
+	echo "graph_order processed failed"
+
+	echo "processed.label processed jobs"
+	echo "processed.draw LINE1"
+	echo "failed.label failed jobs"
+	echo "failed.draw LINE1"
+
+	exit
+fi
+
+function calculate_value() {
+	local name=$1
+	local count=$2
+	local statefile=$MUNIN_STATEFILE$name
+
+	local old_count=0
+	local value=0
+
+	if [ -f $statefile ]; then
+		old_count=$(<$statefile)
+	fi
+	echo $count > $statefile
+	if [ "$count" -ge "$old_count" -a "$old_count" -ne "0" ]; then
+		value=$(( $count - $old_count ))
+	fi
+	echo "$name.value $( echo "scale=2; $value/5" | bc )"
+}
+
+[[ -s "$(eval echo ~$(whoami))/.rvm/scripts/rvm" ]] && source "$(eval echo ~$(whoami))/.rvm/scripts/rvm" > /dev/null 2>&1 # Load RVM into a shell session *as a function*
+
+cd "$path"
+
+result=$(ruby /etc/munin/helper/sidekiq_get_stats.rb)
+
+processed_sum=$(echo $result | cut -d: -f1)
+failed_sum=$(echo $result | cut -d: -f2)
+
+calculate_value "processed" $processed_sum
+calculate_value "failed" $failed_sum
