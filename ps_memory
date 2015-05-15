@@ -83,8 +83,13 @@ if [ "$1" = "config" ]; then
 fi
 
 for name in $names; do
-        fieldname=$(clean_fieldname $name)
+	fieldname=$(clean_fieldname $name)
 	printf "$fieldname.value "
 
-	python /etc/munin/helper/ps_mem.py -p $(pgrep -f $name | paste -d, -s) -t
+	pids=$(pgrep -f $name | paste -d, -s)
+	if [ -n "$pids" ]; then
+		python /etc/munin/helper/ps_mem.py -p $pids -t
+	else
+		echo 0
+	fi
 done
