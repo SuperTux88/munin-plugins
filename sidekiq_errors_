@@ -1,0 +1,83 @@
+#!/bin/bash
+
+: <<=cut
+
+=head1 NAME
+
+sidekiq_errors_ - Munin plugin for sidekiq errors.
+
+=head1 CONFIGURATION
+
+There is no default configuration. This is an example:
+
+  [sidekiq_*]
+     user diaspora
+     env.path /srv/diaspora
+
+=head1 MAGIC MARKERS
+
+  #%# family=manual
+  #%# capabilities=autoconf
+
+=head1 AUTHOR
+
+Copyright (C) 2015 Benjamin Neff <benjamin@coding4.coffee>
+
+=head1 LICENSE
+
+GPLv2
+
+=cut
+
+if [ "$1" = "autoconf" ] ; then 
+	if [ -n "$path" ] ; then
+		echo "yes"
+	else
+		echo "\$path not defined."
+	fi
+	exit
+fi
+
+SET=${0##*sidekiq_errors_}
+
+declare -a KEYS
+declare -a NAMES
+declare -a VALUES
+
+[[ -s "$(eval echo ~$(whoami))/.rvm/scripts/rvm" ]] && source "$(eval echo ~$(whoami))/.rvm/scripts/rvm" > /dev/null 2>&1 # Load RVM into a shell session *as a function*
+
+cd "$path"
+
+count=0
+for line in $(ruby /etc/munin/helper/sidekiq_error_stats.rb ${SET})
+do
+  name=$(echo ${line} | cut -d "|" -f 1)
+  NAMES[${count}]=${name}
+  KEYS[${count}]=$(echo ${name} | sed s/::/_/g)
+  VALUES[${count}]=$(echo ${line} | cut -d "|" -f 2)
+  count=$(( $count + 1 ))
+done
+arraylength=${#NAMES[@]}
+
+if [ "$1" = "config" ] ; then
+	echo "graph_args --base 1000 --lower-limit 0";
+	echo "graph_title Sidekiq errors ${SET}";
+	echo "graph_category sidekiq";
+	echo "graph_info This graph shows failed jobs in the ${SET} set.";
+	echo "graph_period min"
+	echo "graph_vlabel failed jobs"
+
+	for (( i=1; i<${arraylength}+1; i++ ));
+	do
+		echo "${KEYS[$i-1]}.label ${NAMES[$i-1]}"
+		echo "${KEYS[$i-1]}.draw LINE1"
+	done
+
+	exit
+fi
+
+for (( i=1; i<${arraylength}+1; i++ ));
+do
+	echo "${KEYS[$i-1]}.value ${VALUES[$i-1]}"
+done
+
