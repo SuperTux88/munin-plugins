@@ -4,6 +4,14 @@
 # munin-murmur.py - "murmur stats (User/Bans/Uptime/Channels)" script for munin.
 # Copyright (c) 2012, Natenom / natenom@natenom.name
 # modified by Benjamin Neff <benjamin@coding4coffee.ch>
+#         and Lennart Buhl <git@hackmate.de>
+
+#Hardcoded Bot names
+botnames = ["fluffy", "NetiMusicBot_v2"]
+botsuffix = "-bot"
+
+#Define threshold for idling (seconds)
+idletime = 300 # 5 minutes
 
 #Path to Murmur.ice
 iceslice='/usr/share/slice/Murmur.ice'
@@ -49,11 +57,15 @@ if (sys.argv[1:]):
     print 'users.label Users (All)'
     print 'usersnotauth.label Users (Not authenticated)'
     print 'usersmuted.label Users (Muted)'
+    print 'usersbots.label Users (Bots)'
+    print 'usersactive.label Users (Active)'
     print 'chancount.label Channelcount/10'
     print 'bancount.label Bans on server'
     sys.exit(0)
 
 
+# Available Murmur ICE functionality:
+#   https://github.com/mumble-voip/mumble/blob/master/src/murmur/Murmur.ice
 meta = Murmur.MetaPrx.checkedCast(ice.stringToProxy("Meta:tcp -h 127.0.0.1 -p %s" % (iceport)))
 try:
     server=meta.getServer(1)
@@ -62,21 +74,32 @@ except Murmur.InvalidSecretException:
     ice.shutdown()
     sys.exit(1)
 
+ismute = lambda usr: usr.mute or usr.selfMute or usr.suppress
+isbot = lambda usr: usr.name in botnames or usr.name.endswith(botsuffix)
+
 #count users
 usersnotauth=0
 usersmuted=0
+usersbots=0
+usersactive=0
 users=server.getUsers()
 for key in users.keys():
   user = users[key]
   if (user.userid == -1):
     usersnotauth+=1
-  if (user.mute) or (user.selfMute) or (user.suppress):
+  if ismute(user):
     usersmuted+=1
+  if isbot(user):
+    usersbots+=1
+  if not (ismute(user) or isbot(user) or user.idlesecs > idletime):
+    usersactive+=1
 
 print "users.value %i" % (len(users))
-print "chancount.value %.1f" % (len(server.getChannels())/10.0)
-print "bancount.value %i" % (len(server.getBans()))
 print "usersnotauth.value %i" % (usersnotauth)
 print "usersmuted.value %i" % (usersmuted)
+print "usersbots.value %i" % (usersbots)
+print "usersactive.value %i" % (usersactive)
+print "chancount.value %.1f" % (len(server.getChannels())/10.0)
+print "bancount.value %i" % (len(server.getBans()))
   
 ice.shutdown()
