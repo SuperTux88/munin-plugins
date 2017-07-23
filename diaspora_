@@ -65,7 +65,7 @@ def getstat()
         http.use_ssl = true
         http.verify_mode = OpenSSL::SSL::VERIFY_NONE
     end
-    request = Net::HTTP::Get.new("/statistics.json")
+    request = Net::HTTP::Get.new("/nodeinfo/2.0")
     response = http.request(request)
     if response.code == "200"
         return response.body
@@ -120,11 +120,11 @@ result = JSON.parse(getstat())
 
 case @mode
     when "users"
-        printf "active_users_monthly.value %s\n", result["active_users_monthly"]
-        printf "active_users_halfyear.value %s\n", result["active_users_halfyear"]
-        printf "total_users.value %s\n", result["total_users"]
+        printf "active_users_monthly.value %s\n", result["usage"]["users"]["activeMonth"]
+        printf "active_users_halfyear.value %s\n", result["usage"]["users"]["activeHalfyear"]
+        printf "total_users.value %s\n", result["usage"]["users"]["total"]
     when "posts"
-        printf "local_posts.value %s\n", result["local_posts"]
-        printf "local_comments.value %s\n", result["local_comments"]
+        printf "local_posts.value %s\n", result["usage"]["localPosts"]
+        printf "local_comments.value %s\n", result["usage"]["localComments"]
 end
 
